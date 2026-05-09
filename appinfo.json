@@ -18,13 +18,13 @@
     "media": [
       {
         "type": "font",
-        "name": "FONT_ORB_14",
+        "name": "FONT_ORB_20",
         "file": "fonts/Orbitron-900.ttf",
         "characterRegex": "[0-9: ]"
       },
       {
         "type": "font",
-        "name": "FONT_ORB_6",
+        "name": "FONT_ORB_7",
         "file": "fonts/Orbitron-900.ttf",
         "characterRegex": "[A-Z0-9 :,.%/%-]"
       }

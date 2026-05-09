@@ -1,26 +1,26 @@
 /*
  * GTA2Watch -- Pebble Time Steel (basalt) only
- * Font: Orbitron weight 900 (instantiated from variable font)
- *       FONT_ORB_14 size 14 — time digits
- *       FONT_ORB_6  size 6  — all body text
+ * Font: Orbitron weight 900 (static instance)
+ *   FONT_ORB_20 size 20 — time (drawn twice for extra boldness)
+ *   FONT_ORB_7  size 7  — all body text
  *
  * Layout (144 x 168)
  * ─────────────────────────────────────────
- *  [■ FRI, 08 MAY 26 ═══════════════════► ]  y=4   blue pill, bleeds right
- *         ( 2  3 : 4  2 )                     y=16  capsule
- *        PLAYER ONE  12,500                   y=ac  scores
- *             EMPTY
- *             EMPTY
- *  ──────────────────────────────────────      div
- *       HEART RATE: 72 BPM                    stats
- *          CALORIES: 540 KCAL
- *       ACTIVE MINS: 45
- *           BATTERY: 87%
- *          RECOVERY: STABLE
- *  ──────────────────────────────────────      div
- *        PLAY NEXT LEVEL                      menu
- *       SAVE CURRENT GAME
- *       BACK TO MAIN MENU
+ *  [■ FRI, 08 MAY 26 ═══════════════════► ]  y=3
+ *         ( 2  3 : 5  0 )                     y=16
+ *        PLAYER ONE  12,500                   y=44
+ *             EMPTY                           y=53
+ *             EMPTY                           y=61
+ *
+ *       HEART RATE: 72 BPM                   y=74
+ *          CALORIES: 540 KCAL                y=83
+ *       ACTIVE MINS: 45                      y=92
+ *           BATTERY: 87%                     y=101
+ *          RECOVERY: STABLE                  y=110
+ *
+ *        PLAY NEXT LEVEL                     y=124
+ *       SAVE CURRENT GAME                    y=133
+ *       BACK TO MAIN MENU                    y=142
  *
  * Settings (appKeys alphabetical -> index):
  *   Key 0: A_SHOW_DATE   0=hide  1=show
@@ -43,21 +43,23 @@
 #define COL_GOLD    GColorChromeYellow
 
 /* ── Layout ── */
-#define BAR_Y          4
-#define BAR_H          9
+#define BAR_Y          3
+#define BAR_H         10
 #define BAR_X         10
+
 #define CAP_Y         16
-#define CAP_H         14
-#define CAP_R          7
+#define CAP_H         22
+#define CAP_R         11
 #define CAP_PAD_X      5
-#define SCORE_Y       38   /* cap_y + cap_h + 8 */
+
+#define SCORE_Y       44
 #define SCORE_LH       9
-#define DIV1_Y        67   /* score_y + 3*lh + 4 */
-#define STATS_Y       72
+
+#define STATS_Y       74
 #define STATS_LH       9
 #define STATS_N        5
-#define DIV2_Y       121
-#define MENU_Y       126
+
+#define MENU_Y       124
 #define MENU_LH        9
 #define MENU_N         3
 
@@ -77,8 +79,8 @@ static GColor acc(void) { return s.accent ? COL_GOLD : COL_RED; }
 /* ── Globals ── */
 static Window *s_win;
 static Layer  *s_canvas;
-static GFont   s_font_time;   /* Orbitron 900 size 14 */
-static GFont   s_font_body;   /* Orbitron 900 size 6  */
+static GFont   s_font_time;   /* Orbitron 900 size 20 */
+static GFont   s_font_body;   /* Orbitron 900 size 7  */
 
 static char s_hh[3];
 static char s_mm_tens[2];
@@ -92,14 +94,29 @@ static int  s_batt = 100;
 static void fmt_comma(int n, char *buf, int sz) {
   if      (n < 1000)    snprintf(buf, sz, "%d", n);
   else if (n < 1000000) snprintf(buf, sz, "%d,%03d", n/1000, n%1000);
-  else                  snprintf(buf, sz, "%d,%03d,%03d", n/1000000,(n/1000)%1000,n%1000);
+  else                  snprintf(buf, sz, "%d,%03d,%03d",
+                          n/1000000,(n/1000)%1000,n%1000);
 }
 
-static void draw_center(GContext *ctx, const char *txt, GFont font, int y, int h, GColor col) {
+/* Centre-aligned text helper */
+static void draw_center(GContext *ctx, const char *txt, GFont font,
+                        int y, int h, GColor col) {
   graphics_context_set_text_color(ctx, col);
   graphics_draw_text(ctx, txt, font,
     GRect(0, y, SCR_W, h+2),
     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+}
+
+/* Draw time digit bold — rendered twice, offset by 1px */
+static void draw_time_digit(GContext *ctx, const char *ch, GFont font,
+                             GRect r, GColor col) {
+  graphics_context_set_text_color(ctx, col);
+  graphics_draw_text(ctx, ch, font, r,
+    GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
+  /* Second pass offset 1px right for extra stroke weight */
+  GRect r2 = GRect(r.origin.x+1, r.origin.y, r.size.w, r.size.h);
+  graphics_draw_text(ctx, ch, font, r2,
+    GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 }
 
 static void canvas_update(Layer *layer, GContext *ctx) {
@@ -111,7 +128,8 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   /* ── DATE BAR ── */
   if (s.show_date) {
     graphics_context_set_fill_color(ctx, COL_BLUE);
-    graphics_fill_circle(ctx, GPoint(BAR_X + BAR_H/2, BAR_Y + BAR_H/2), BAR_H/2);
+    graphics_fill_circle(ctx,
+      GPoint(BAR_X + BAR_H/2, BAR_Y + BAR_H/2), BAR_H/2);
     graphics_fill_rect(ctx,
       GRect(BAR_X + BAR_H/2, BAR_Y, SCR_W - BAR_X, BAR_H), 0, GCornerNone);
     graphics_context_set_text_color(ctx, COL_WHITE);
@@ -126,53 +144,62 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   graphics_draw_round_rect(ctx,
     GRect(CAP_PAD_X, CAP_Y, SCR_W - CAP_PAD_X*2, CAP_H), CAP_R);
 
-  int ty  = CAP_Y + 1;
+  int ty  = CAP_Y + 3;
   int mid = SCR_W / 2;
 
-  /* HH white */
+  /* HH — draw twice for boldness */
+  draw_time_digit(ctx, s_hh, s_font_time,
+    GRect(CAP_PAD_X, ty, mid - CAP_PAD_X - 4, CAP_H),
+    COL_WHITE);
+  /* Force right-align manually: not needed — just use right align */
   graphics_context_set_text_color(ctx, COL_WHITE);
   graphics_draw_text(ctx, s_hh, s_font_time,
     GRect(CAP_PAD_X, ty, mid - CAP_PAD_X - 4, CAP_H),
     GTextOverflowModeWordWrap, GTextAlignmentRight, NULL);
 
-  /* Colon white */
+  /* Colon */
+  graphics_context_set_text_color(ctx, COL_WHITE);
   graphics_draw_text(ctx, ":", s_font_time,
-    GRect(mid - 4, ty, 8, CAP_H),
+    GRect(mid - 5, ty, 10, CAP_H),
+    GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  graphics_draw_text(ctx, ":", s_font_time,
+    GRect(mid - 4, ty, 10, CAP_H),
     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 
-  /* MM tens white */
+  /* MM tens white — twice */
   graphics_draw_text(ctx, s_mm_tens, s_font_time,
-    GRect(mid + 3, ty, 14, CAP_H),
+    GRect(mid + 4, ty, 18, CAP_H),
+    GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, s_mm_tens, s_font_time,
+    GRect(mid + 5, ty, 18, CAP_H),
     GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 
-  /* MM unit accent */
+  /* MM unit accent — twice */
   graphics_context_set_text_color(ctx, accent);
   graphics_draw_text(ctx, s_mm_unit, s_font_time,
-    GRect(mid + 15, ty, 14, CAP_H),
+    GRect(mid + 18, ty, 18, CAP_H),
+    GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, s_mm_unit, s_font_time,
+    GRect(mid + 19, ty, 18, CAP_H),
     GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 
-  /* ── SCORES ── */
-  draw_center(ctx, s_score, s_font_body, SCORE_Y,          SCORE_LH, COL_WHITE);
-  draw_center(ctx, "EMPTY", s_font_body, SCORE_Y+SCORE_LH, SCORE_LH, COL_DIM);
-  draw_center(ctx, "EMPTY", s_font_body, SCORE_Y+SCORE_LH*2, SCORE_LH, COL_DIM);
+  /* ── SCORES ── no divider lines */
+  draw_center(ctx, s_score, s_font_body, SCORE_Y,            SCORE_LH, COL_WHITE);
+  draw_center(ctx, "EMPTY", s_font_body, SCORE_Y + SCORE_LH, SCORE_LH, COL_DIM);
+  draw_center(ctx, "EMPTY", s_font_body, SCORE_Y + SCORE_LH*2, SCORE_LH, COL_DIM);
 
-  /* ── DIVIDER 1 ── */
-  graphics_context_set_stroke_color(ctx, GColorDarkGray);
-  graphics_context_set_stroke_width(ctx, 1);
-  graphics_draw_line(ctx, GPoint(6, DIV1_Y), GPoint(SCR_W-6, DIV1_Y));
-
-  /* ── STATS ── */
+  /* ── STATS ── no divider lines */
   for (int i = 0; i < STATS_N; i++) {
     draw_center(ctx, s_stats[i], s_font_body,
-      STATS_Y + i*STATS_LH, STATS_LH, COL_WHITE);
+      STATS_Y + i * STATS_LH, STATS_LH, COL_WHITE);
   }
 
-  /* ── DIVIDER 2 + MENU ── */
+  /* ── MENU ── */
   if (s.show_menu) {
-    graphics_draw_line(ctx, GPoint(6, DIV2_Y), GPoint(SCR_W-6, DIV2_Y));
     for (int i = 0; i < MENU_N; i++) {
       GColor mc = (i == 0) ? accent : COL_GOLD;
-      draw_center(ctx, s_menu[i], s_font_body, MENU_Y + i*MENU_LH, MENU_LH, mc);
+      draw_center(ctx, s_menu[i], s_font_body,
+        MENU_Y + i * MENU_LH, MENU_LH, mc);
     }
   }
 }
@@ -242,8 +269,13 @@ static void health_cb(HealthEventType type, void *ctx) {
 
 static void window_load(Window *w) {
   Layer *root = window_get_root_layer(w);
-  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_14));
-  s_font_body = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_6));
+  /*
+   * CloudPebble resources — same Orbitron-900.ttf twice:
+   *   FONT_ORB_20  size 20  — time digits
+   *   FONT_ORB_7   size 7   — body text
+   */
+  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_20));
+  s_font_body = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_7));
   window_set_background_color(w, COL_BLACK);
   s_canvas = layer_create(layer_get_bounds(root));
   layer_set_update_proc(s_canvas, canvas_update);
