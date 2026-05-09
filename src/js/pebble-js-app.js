@@ -1,5 +1,5 @@
 /*
- * GTA2Watch — PebbleKit JS
+ * GTA2Watch -- PebbleKit JS
  * Keys (alphabetical = index):
  *   Key 0: A_SHOW_DATE    0=hide  1=show
  *   Key 1: B_SHOW_MENU    0=hide  1=show
@@ -15,17 +15,19 @@ function loadCfg() {
     tl: +(localStorage.getItem('tl') || '0')
   };
 }
+
 function saveCfg(c) {
   localStorage.setItem('sd', c.sd);
   localStorage.setItem('sm', c.sm);
   localStorage.setItem('ss', c.ss);
   localStorage.setItem('tl', c.tl);
 }
+
 function sendMsg(c) {
   Pebble.sendAppMessage(
     { 0: c.sd, 1: c.sm, 2: c.ss, 3: c.tl },
-    function() { console.log('ok'); },
-    function(e) { console.log('fail', e); }
+    function() { console.log('GTA2Watch: settings sent ok'); },
+    function(e) { console.log('GTA2Watch: send failed', JSON.stringify(e)); }
   );
 }
 
@@ -69,12 +71,36 @@ function buildConfig(c) {
   return 'data:text/html,' + encodeURIComponent(h);
 }
 
-Pebble.addEventListener('ready', function() { console.log('GTA2Watch ready'); });
-Pebble.addEventListener('showConfiguration', function() { Pebble.openURL(buildConfig(loadCfg())); });
+/* ready fires first — safe to register other listeners here */
+Pebble.addEventListener('ready', function() {
+  console.log('GTA2Watch: ready');
+});
+
+Pebble.addEventListener('showConfiguration', function() {
+  var cfg = loadCfg();
+  Pebble.openURL(buildConfig(cfg));
+});
+
 Pebble.addEventListener('webviewclosed', function(e) {
-  if (!e || !e.response || e.response === '' || e.response === 'CANCELLED') return;
+  /* Guard against null/empty/cancelled */
+  if (!e || !e.response || e.response === '' || e.response === 'CANCELLED') {
+    console.log('GTA2Watch: config cancelled');
+    return;
+  }
   var raw = e.response;
-  if (raw.indexOf('#') !== -1) raw = raw.substring(raw.lastIndexOf('#') + 1);
-  var c; try { c = JSON.parse(decodeURIComponent(raw)); } catch(err) { return; }
-  saveCfg(c); sendMsg(c);
+  /* Strip everything before the last # */
+  if (raw.indexOf('#') !== -1) {
+    raw = raw.substring(raw.lastIndexOf('#') + 1);
+  }
+  if (!raw || raw === '') return;
+  var c;
+  try {
+    c = JSON.parse(decodeURIComponent(raw));
+  } catch (err) {
+    console.log('GTA2Watch: parse error', err);
+    return;
+  }
+  if (!c) return;
+  saveCfg(c);
+  sendMsg(c);
 });

@@ -12,27 +12,21 @@
     "A_SHOW_DATE":  0,
     "B_SHOW_MENU":  1,
     "C_SHOW_STEPS": 2,
-    "D_TIME_LAST":  3
+    "D_ACCENT":     3
   },
   "resources": {
     "media": [
       {
         "type": "font",
-        "name": "FONT_ORB_EB_24",
+        "name": "FONT_ORB_EB_14",
         "file": "fonts/Orbitron-ExtraBold.ttf",
         "characterRegex": "[0-9: ]"
       },
       {
         "type": "font",
-        "name": "FONT_ORB_BD_8",
+        "name": "FONT_ORB_BD_5",
         "file": "fonts/Orbitron-Bold.ttf",
         "characterRegex": "[A-Z0-9 :,.%/%-]"
-      },
-      {
-        "type": "font",
-        "name": "FONT_ORB_EB_8",
-        "file": "fonts/Orbitron-ExtraBold.ttf",
-        "characterRegex": "[A-Z0-9 ]"
       }
     ]
   }
