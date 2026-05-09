@@ -18,14 +18,14 @@
     "media": [
       {
         "type": "font",
-        "name": "FONT_ORB_EB_14",
-        "file": "fonts/Orbitron-ExtraBold.ttf",
+        "name": "FONT_ORB_14",
+        "file": "fonts/Orbitron-900.ttf",
         "characterRegex": "[0-9: ]"
       },
       {
         "type": "font",
-        "name": "FONT_ORB_BD_5",
-        "file": "fonts/Orbitron-Bold.ttf",
+        "name": "FONT_ORB_6",
+        "file": "fonts/Orbitron-900.ttf",
         "characterRegex": "[A-Z0-9 :,.%/%-]"
       }
     ]

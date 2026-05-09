@@ -1,26 +1,26 @@
 /*
  * GTA2Watch -- Pebble Time Steel (basalt) only
- * Fonts: Orbitron ExtraBold 14 (time), Orbitron Bold 5 (all text)
+ * Font: Orbitron weight 900 (instantiated from variable font)
+ *       FONT_ORB_14 size 14 — time digits
+ *       FONT_ORB_6  size 6  — all body text
  *
  * Layout (144 x 168)
- * ──────────────────────────────────────────
- *  [■ FRI, 08 MAY 26 ═══════════════════►  ]  y=5   blue pill, bleeds right
- *         ( 2  3 : 3  4 )                      y=18  tight capsule
- *
- *        PLAYER ONE  12,500                     y=40  scores centred+spaced
- *             EMPTY                             y=48
- *             EMPTY                             y=55
- *  ─────────────────────────────────────        y=67  divider
- *      HEART RATE: 0 BPM                        y=72  stats centred+spaced
- *         CALORIES: 0 KCAL                      y=81
- *      ACTIVE MINS: 0                           y=90
- *          BATTERY: 80%                         y=99
- *         RECOVERY: CRITICAL                    y=108
- *  ─────────────────────────────────────        y=121 divider
- *       PLAY NEXT LEVEL                         y=126 menu
- *      SAVE CURRENT GAME                        y=135
- *      BACK TO MAIN MENU                        y=144
- * ──────────────────────────────────────────
+ * ─────────────────────────────────────────
+ *  [■ FRI, 08 MAY 26 ═══════════════════► ]  y=4   blue pill, bleeds right
+ *         ( 2  3 : 4  2 )                     y=16  capsule
+ *        PLAYER ONE  12,500                   y=ac  scores
+ *             EMPTY
+ *             EMPTY
+ *  ──────────────────────────────────────      div
+ *       HEART RATE: 72 BPM                    stats
+ *          CALORIES: 540 KCAL
+ *       ACTIVE MINS: 45
+ *           BATTERY: 87%
+ *          RECOVERY: STABLE
+ *  ──────────────────────────────────────      div
+ *        PLAY NEXT LEVEL                      menu
+ *       SAVE CURRENT GAME
+ *       BACK TO MAIN MENU
  *
  * Settings (appKeys alphabetical -> index):
  *   Key 0: A_SHOW_DATE   0=hide  1=show
@@ -43,17 +43,16 @@
 #define COL_GOLD    GColorChromeYellow
 
 /* ── Layout ── */
-#define BAR_Y          5
+#define BAR_Y          4
 #define BAR_H          9
 #define BAR_X         10
-
-#define CAP_Y         18
+#define CAP_Y         16
 #define CAP_H         14
 #define CAP_R          7
-#define CAP_PAD_X      4
-
-#define SCORE_Y       40
-#define DIV1_Y        67
+#define CAP_PAD_X      5
+#define SCORE_Y       38   /* cap_y + cap_h + 8 */
+#define SCORE_LH       9
+#define DIV1_Y        67   /* score_y + 3*lh + 4 */
 #define STATS_Y       72
 #define STATS_LH       9
 #define STATS_N        5
@@ -78,8 +77,8 @@ static GColor acc(void) { return s.accent ? COL_GOLD : COL_RED; }
 /* ── Globals ── */
 static Window *s_win;
 static Layer  *s_canvas;
-static GFont   s_font_time;  /* Orbitron ExtraBold 14 */
-static GFont   s_font_text;  /* Orbitron Bold 5       */
+static GFont   s_font_time;   /* Orbitron 900 size 14 */
+static GFont   s_font_body;   /* Orbitron 900 size 6  */
 
 static char s_hh[3];
 static char s_mm_tens[2];
@@ -90,22 +89,19 @@ static char s_stats[STATS_N][28];
 static char s_menu[MENU_N][20];
 static int  s_batt = 100;
 
-/* ── Comma formatter ── */
 static void fmt_comma(int n, char *buf, int sz) {
   if      (n < 1000)    snprintf(buf, sz, "%d", n);
   else if (n < 1000000) snprintf(buf, sz, "%d,%03d", n/1000, n%1000);
   else                  snprintf(buf, sz, "%d,%03d,%03d", n/1000000,(n/1000)%1000,n%1000);
 }
 
-/* ── Draw text centred — Pebble native, no scaling ── */
 static void draw_center(GContext *ctx, const char *txt, GFont font, int y, int h, GColor col) {
   graphics_context_set_text_color(ctx, col);
   graphics_draw_text(ctx, txt, font,
-    GRect(0, y, SCR_W, h + 2),
+    GRect(0, y, SCR_W, h+2),
     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 }
 
-/* ── Canvas ── */
 static void canvas_update(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, COL_BLACK);
   graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
@@ -119,12 +115,12 @@ static void canvas_update(Layer *layer, GContext *ctx) {
     graphics_fill_rect(ctx,
       GRect(BAR_X + BAR_H/2, BAR_Y, SCR_W - BAR_X, BAR_H), 0, GCornerNone);
     graphics_context_set_text_color(ctx, COL_WHITE);
-    graphics_draw_text(ctx, s_date, s_font_text,
+    graphics_draw_text(ctx, s_date, s_font_body,
       GRect(BAR_X + 8, BAR_Y + 1, SCR_W - BAR_X - 8, BAR_H),
       GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
   }
 
-  /* ── TIME CAPSULE ── */
+  /* ── CAPSULE ── */
   graphics_context_set_stroke_color(ctx, GColorLightGray);
   graphics_context_set_stroke_width(ctx, 2);
   graphics_draw_round_rect(ctx,
@@ -156,31 +152,31 @@ static void canvas_update(Layer *layer, GContext *ctx) {
     GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 
   /* ── SCORES ── */
-  draw_center(ctx, s_score, s_font_text, SCORE_Y,    8, COL_WHITE);
-  draw_center(ctx, "EMPTY", s_font_text, SCORE_Y+8,  7, COL_DIM);
-  draw_center(ctx, "EMPTY", s_font_text, SCORE_Y+15, 7, COL_DIM);
+  draw_center(ctx, s_score, s_font_body, SCORE_Y,          SCORE_LH, COL_WHITE);
+  draw_center(ctx, "EMPTY", s_font_body, SCORE_Y+SCORE_LH, SCORE_LH, COL_DIM);
+  draw_center(ctx, "EMPTY", s_font_body, SCORE_Y+SCORE_LH*2, SCORE_LH, COL_DIM);
 
-  /* ── DIV 1 ── */
+  /* ── DIVIDER 1 ── */
   graphics_context_set_stroke_color(ctx, GColorDarkGray);
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_line(ctx, GPoint(6, DIV1_Y), GPoint(SCR_W-6, DIV1_Y));
 
-  /* ── STATS ── each line full string centred, label white value accent */
+  /* ── STATS ── */
   for (int i = 0; i < STATS_N; i++) {
-    draw_center(ctx, s_stats[i], s_font_text, STATS_Y + i*STATS_LH, STATS_LH, COL_WHITE);
+    draw_center(ctx, s_stats[i], s_font_body,
+      STATS_Y + i*STATS_LH, STATS_LH, COL_WHITE);
   }
 
-  /* ── DIV 2 + MENU ── */
+  /* ── DIVIDER 2 + MENU ── */
   if (s.show_menu) {
     graphics_draw_line(ctx, GPoint(6, DIV2_Y), GPoint(SCR_W-6, DIV2_Y));
     for (int i = 0; i < MENU_N; i++) {
       GColor mc = (i == 0) ? accent : COL_GOLD;
-      draw_center(ctx, s_menu[i], s_font_text, MENU_Y + i*MENU_LH, MENU_LH, mc);
+      draw_center(ctx, s_menu[i], s_font_body, MENU_Y + i*MENU_LH, MENU_LH, mc);
     }
   }
 }
 
-/* ── Data update ── */
 static void update_display(struct tm *t) {
   snprintf(s_hh,      sizeof(s_hh),      "%02d", t->tm_hour);
   snprintf(s_mm_tens, sizeof(s_mm_tens), "%d",   t->tm_min/10);
@@ -228,34 +224,26 @@ static void update_display(struct tm *t) {
   layer_mark_dirty(s_canvas);
 }
 
-/* ── AppMessage ── */
 static void inbox_received(DictionaryIterator *iter, void *ctx) {
   Tuple *t;
-  t=dict_find(iter,0); if(t) s.show_date  =(uint8_t)t->value->int32;
-  t=dict_find(iter,1); if(t) s.show_menu  =(uint8_t)t->value->int32;
-  t=dict_find(iter,2); if(t) s.show_steps =(uint8_t)t->value->int32;
-  t=dict_find(iter,3); if(t) s.accent     =(uint8_t)t->value->int32;
+  t=dict_find(iter,0); if(t) s.show_date =(uint8_t)t->value->int32;
+  t=dict_find(iter,1); if(t) s.show_menu =(uint8_t)t->value->int32;
+  t=dict_find(iter,2); if(t) s.show_steps=(uint8_t)t->value->int32;
+  t=dict_find(iter,3); if(t) s.accent    =(uint8_t)t->value->int32;
   settings_save();
   layer_mark_dirty(s_canvas);
 }
 
-/* ── Callbacks ── */
 static void tick_cb(struct tm *t, TimeUnits u)        { update_display(t); }
 static void batt_cb(BatteryChargeState bs)             { s_batt=bs.charge_percent; layer_mark_dirty(s_canvas); }
 static void health_cb(HealthEventType type, void *ctx) {
   time_t now=time(NULL); update_display(localtime(&now));
 }
 
-/* ── Window ── */
 static void window_load(Window *w) {
   Layer *root = window_get_root_layer(w);
-  /*
-   * CloudPebble resources:
-   *   Orbitron-ExtraBold.ttf  ->  FONT_ORB_EB_14   size 14
-   *   Orbitron-Bold.ttf       ->  FONT_ORB_BD_5    size 5
-   */
-  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_EB_14));
-  s_font_text = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_BD_5));
+  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_14));
+  s_font_body = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORB_6));
   window_set_background_color(w, COL_BLACK);
   s_canvas = layer_create(layer_get_bounds(root));
   layer_set_update_proc(s_canvas, canvas_update);
@@ -267,10 +255,9 @@ static void window_load(Window *w) {
 static void window_unload(Window *w) {
   layer_destroy(s_canvas);
   fonts_unload_custom_font(s_font_time);
-  fonts_unload_custom_font(s_font_text);
+  fonts_unload_custom_font(s_font_body);
 }
 
-/* ── Init ── */
 static void init(void) {
   settings_load();
   app_message_register_inbox_received(inbox_received);
