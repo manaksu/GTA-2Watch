@@ -1,32 +1,25 @@
 {
-  "uuid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-  "shortName": "GTA2Watch",
-  "longName": "GTA2Watch",
+  "uuid": "d4e5f6a7-b8c9-0123-defa-234567890123",
+  "shortName": "LofiWatch",
+  "longName": "Lofi Watch",
   "companyName": "Manaksu",
   "versionLabel": "1.0",
   "sdkVersion": "3",
   "targetPlatforms": ["basalt"],
   "watchapp": { "watchface": true },
-  "capabilities": ["configurable"],
-  "appKeys": {
-    "A_SHOW_DATE":  0,
-    "B_SHOW_MENU":  1,
-    "C_SHOW_STEPS": 2,
-    "D_ACCENT":     3
-  },
+  "appKeys": {},
   "resources": {
     "media": [
       {
-        "type": "font",
-        "name": "FONT_ORB_20",
-        "file": "fonts/Orbitron-900.ttf",
-        "characterRegex": "[0-9: ]"
+        "type": "bitmap",
+        "name": "IMG_LOFI_BG",
+        "file": "images/lofi_bg.png"
       },
       {
         "type": "font",
-        "name": "FONT_ORB_7",
-        "file": "fonts/Orbitron-900.ttf",
-        "characterRegex": "[A-Z0-9 :,.%/%-]"
+        "name": "FONT_DS_17",
+        "file": "fonts/DS-DIGI.TTF",
+        "characterRegex": "[0-9:]"
       }
     ]
   }
