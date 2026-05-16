@@ -1,4 +1,4 @@
-# GTA2 Map Watchface
+# GTA2 Inspired Map Watchface
 
 Pebble Time Steel (basalt) watchface using the GTA2 Industrial Sector map as background.
 
