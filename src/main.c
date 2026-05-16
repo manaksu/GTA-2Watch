@@ -113,7 +113,7 @@ static void apply_theme(void) {
   }
   text_layer_set_text_color(s_time_layer, time_col);
   text_layer_set_background_color(s_time_layer, time_bg);
-  text_layer_set_text_color(s_date_layer, time_col == GColorBlack ? GColorBlack : GColorWhite);
+  text_layer_set_text_color(s_date_layer, GColorWhite);
   text_layer_set_background_color(s_date_layer, time_bg);
   text_layer_set_text_color(s_steps_label, stat_col);
   text_layer_set_text_color(s_heart_label, stat_col);
