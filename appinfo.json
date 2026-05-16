@@ -19,7 +19,7 @@
       { "type": "bitmap", "name": "IMAGE_HUD_BAR_BATT",   "file": "images/hud_bar_batt.png",  "storageFormat": "pbi" }
     ]
   },
-  "capabilities": [],
+  "capabilities": ["health"],
   "projectType": "native",
   "messageKeys": {}
 }

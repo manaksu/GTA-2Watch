@@ -1,23 +1,28 @@
 #include <pebble.h>
 
 /*
- * HUD: 30x28px total, top-left corner
- * icon=7px wide, bar=22px wide, row=8px tall, 2px gap
+ * HUD layout — top-left corner
  *
- *  x=1   x=9
- *  [icon][===bar===]   y=1   steps (blue)
- *  [icon][===bar===]   y=11  heart (yellow)
- *  [icon][===bar===]   y=21  batt  (grey)
+ *  x=1   x=9        x=32  x=34
+ *  [icon][==bar 22==] [stat text]   y=1   steps
+ *  [icon][==bar 22==] [stat text]   y=11  heart
+ *  [icon][==bar 22==] [stat text]   y=21  batt
+ *
+ *  icon=7px, bar=22px, gap=1px between each
+ *  stat text starts at x=32, width=50px (to screen edge)
+ *  row height=8px, row gap=2px
  */
-#define ICON_W   7
-#define BAR_W   22
-#define ROW_H    8
-#define ROW_GAP  2
-#define LEFT     1
-#define BAR_X   (LEFT + ICON_W + 1)  /* 9 */
-#define ROW1_Y   1
-#define ROW2_Y  (ROW1_Y + ROW_H + ROW_GAP)   /* 11 */
-#define ROW3_Y  (ROW2_Y + ROW_H + ROW_GAP)   /* 21 */
+#define ICON_W    7
+#define BAR_W    22
+#define ROW_H     8
+#define ROW_GAP   2
+#define LEFT      1
+#define BAR_X    (LEFT + ICON_W + 1)   /* 9  */
+#define STAT_X   (BAR_X + BAR_W + 2)   /* 33 */
+#define STAT_W   (144 - STAT_X)         /* 111 */
+#define ROW1_Y    1
+#define ROW2_Y   (ROW1_Y + ROW_H + ROW_GAP)   /* 11 */
+#define ROW3_Y   (ROW2_Y + ROW_H + ROW_GAP)   /* 21 */
 
 static Window      *s_window;
 static BitmapLayer *s_bg_layer;
@@ -28,9 +33,53 @@ static GBitmap     *s_icon_steps_bmp,   *s_icon_heart_bmp,   *s_icon_batt_bmp;
 static BitmapLayer *s_bar_steps_layer,  *s_bar_heart_layer,  *s_bar_batt_layer;
 static GBitmap     *s_bar_steps_bmp,    *s_bar_heart_bmp,    *s_bar_batt_bmp;
 
+static TextLayer   *s_steps_label, *s_heart_label, *s_batt_label;
 static TextLayer   *s_time_layer, *s_date_layer;
-static char         s_time_buf[6], s_date_buf[10];
 
+static char s_time_buf[6];
+static char s_date_buf[10];
+static char s_steps_buf[8];
+static char s_heart_buf[6];
+static char s_batt_buf[6];
+
+/* ── stats ── */
+static void update_stats(void) {
+  /* Steps */
+  time_t t_end   = time(NULL);
+  time_t t_start = time_start_of_today();
+  if (t_start < t_end &&
+      health_service_metric_accessible(HealthMetricStepCount, t_start, t_end)) {
+    snprintf(s_steps_buf, sizeof(s_steps_buf), "%d",
+             (int)health_service_sum_today(HealthMetricStepCount));
+  } else {
+    snprintf(s_steps_buf, sizeof(s_steps_buf), "--");
+  }
+
+  /* Heart rate */
+  HealthServiceAccessibilityMask hr =
+    health_service_metric_accessible(HealthMetricHeartRateBPM,
+                                     t_end - 60, t_end);
+  if (hr & HealthServiceAccessibilityMaskAvailable) {
+    HealthValue v = health_service_peek_current_value(HealthMetricHeartRateBPM);
+    if (v > 0)
+      snprintf(s_heart_buf, sizeof(s_heart_buf), "%d", (int)v);
+    else
+      snprintf(s_heart_buf, sizeof(s_heart_buf), "--");
+  } else {
+    snprintf(s_heart_buf, sizeof(s_heart_buf), "--");
+  }
+
+  /* Battery */
+  BatteryChargeState bat = battery_state_service_peek();
+  snprintf(s_batt_buf, sizeof(s_batt_buf), "%d%%",
+           (int)bat.charge_percent);
+
+  text_layer_set_text(s_steps_label, s_steps_buf);
+  text_layer_set_text(s_heart_label, s_heart_buf);
+  text_layer_set_text(s_batt_label,  s_batt_buf);
+}
+
+/* ── time ── */
 static void update_time(struct tm *t) {
   strftime(s_time_buf, sizeof(s_time_buf),
            clock_is_24h_style() ? "%H:%M" : "%I:%M", t);
@@ -41,18 +90,30 @@ static void update_time(struct tm *t) {
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time(tick_time);
+  if (tick_time->tm_min % 5 == 0) update_stats();
 }
 
+/* ── helpers ── */
 static void make_bmp(BitmapLayer **bl, GBitmap **bmp,
                      uint32_t res, GRect frame, Layer *root) {
   *bmp = gbitmap_create_with_resource(res);
   *bl  = bitmap_layer_create(frame);
   bitmap_layer_set_bitmap(*bl, *bmp);
-  /* GCompOpSet lets transparent pixels show the layer below */
   bitmap_layer_set_compositing_mode(*bl, GCompOpSet);
   layer_add_child(root, bitmap_layer_get_layer(*bl));
 }
 
+static TextLayer *make_stat(GRect frame, Layer *root) {
+  TextLayer *tl = text_layer_create(frame);
+  text_layer_set_background_color(tl, GColorClear);
+  text_layer_set_text_color(tl, GColorWhite);
+  text_layer_set_font(tl, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
+  text_layer_set_text_alignment(tl, GTextAlignmentLeft);
+  layer_add_child(root, text_layer_get_layer(tl));
+  return tl;
+}
+
+/* ── window load ── */
 static void window_load(Window *window) {
   Layer *root   = window_get_root_layer(window);
   GRect  bounds = layer_get_bounds(root);
@@ -64,31 +125,34 @@ static void window_load(Window *window) {
   bitmap_layer_set_compositing_mode(s_bg_layer, GCompOpAssign);
   layer_add_child(root, bitmap_layer_get_layer(s_bg_layer));
 
-  /* row 1 - steps */
+  /* row 1 — steps */
   make_bmp(&s_icon_steps_layer, &s_icon_steps_bmp,
            RESOURCE_ID_IMAGE_HUD_ICON_STEPS,
            GRect(LEFT, ROW1_Y, ICON_W, ROW_H), root);
   make_bmp(&s_bar_steps_layer, &s_bar_steps_bmp,
            RESOURCE_ID_IMAGE_HUD_BAR_STEPS,
            GRect(BAR_X, ROW1_Y, BAR_W, ROW_H), root);
+  s_steps_label = make_stat(GRect(STAT_X, ROW1_Y - 1, STAT_W, ROW_H + 2), root);
 
-  /* row 2 - heart rate */
+  /* row 2 — heart rate */
   make_bmp(&s_icon_heart_layer, &s_icon_heart_bmp,
            RESOURCE_ID_IMAGE_HUD_ICON_HEART,
            GRect(LEFT, ROW2_Y, ICON_W, ROW_H), root);
   make_bmp(&s_bar_heart_layer, &s_bar_heart_bmp,
            RESOURCE_ID_IMAGE_HUD_BAR_HEART,
            GRect(BAR_X, ROW2_Y, BAR_W, ROW_H), root);
+  s_heart_label = make_stat(GRect(STAT_X, ROW2_Y - 1, STAT_W, ROW_H + 2), root);
 
-  /* row 3 - battery */
+  /* row 3 — battery */
   make_bmp(&s_icon_batt_layer, &s_icon_batt_bmp,
            RESOURCE_ID_IMAGE_HUD_ICON_BATT,
            GRect(LEFT, ROW3_Y, ICON_W, ROW_H), root);
   make_bmp(&s_bar_batt_layer, &s_bar_batt_bmp,
            RESOURCE_ID_IMAGE_HUD_BAR_BATT,
            GRect(BAR_X, ROW3_Y, BAR_W, ROW_H), root);
+  s_batt_label = make_stat(GRect(STAT_X, ROW3_Y - 1, STAT_W, ROW_H + 2), root);
 
-  /* date - bottom right */
+  /* date — bottom right */
   s_date_layer = text_layer_create(GRect(86, 122, 58, 16));
   text_layer_set_background_color(s_date_layer, GColorBlack);
   text_layer_set_text_color(s_date_layer, GColorWhite);
@@ -96,7 +160,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
-  /* time - bottom right */
+  /* time — bottom right */
   s_time_layer = text_layer_create(GRect(74, 138, 70, 30));
   text_layer_set_background_color(s_time_layer, GColorBlack);
   text_layer_set_text_color(s_time_layer, GColorYellow);
@@ -107,9 +171,13 @@ static void window_load(Window *window) {
 
   time_t now = time(NULL);
   update_time(localtime(&now));
+  update_stats();
 }
 
 static void window_unload(Window *window) {
+  text_layer_destroy(s_steps_label);
+  text_layer_destroy(s_heart_label);
+  text_layer_destroy(s_batt_label);
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_date_layer);
   bitmap_layer_destroy(s_bg_layer);
