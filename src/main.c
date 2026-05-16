@@ -2,12 +2,13 @@
 
 /*
  * GTA2 HUD Watchface
- *   Key 0: KEY_THEME  0=Normal  1=ePaper
+ *   Key 0: KEY_THEME  0=Normal  1=ePaper  2=Monochrome
  */
 
-#define KEY_THEME    0
-#define THEME_NORMAL 0
-#define THEME_EPAPER 1
+#define KEY_THEME      0
+#define THEME_NORMAL   0
+#define THEME_EPAPER   1
+#define THEME_MONO     2
 
 /* ── HUD layout ── */
 #define ICON_W    7
@@ -39,17 +40,86 @@ static TextLayer   *s_time_layer, *s_date_layer;
 static char s_time_buf[6], s_date_buf[10];
 static char s_steps_buf[8], s_heart_buf[6], s_batt_buf[6];
 
+/* ── resource selectors ── */
+static uint32_t bg_res(void) {
+  if (s_theme == THEME_EPAPER) return RESOURCE_ID_IMAGE_GTA2MAP_EPAPER;
+  if (s_theme == THEME_MONO)   return RESOURCE_ID_IMAGE_GTA2MAP_MONO;
+  return RESOURCE_ID_IMAGE_GTA2MAP;
+}
+static uint32_t icon_res(uint32_t normal, uint32_t mono) {
+  return (s_theme == THEME_MONO) ? mono : normal;
+}
+static uint32_t bar_res(uint32_t normal, uint32_t mono) {
+  return (s_theme == THEME_MONO) ? mono : normal;
+}
+
 /* ── apply theme ── */
 static void apply_theme(void) {
+  /* swap background */
   if (s_bg_bitmap) gbitmap_destroy(s_bg_bitmap);
-  uint32_t res = (s_theme == THEME_EPAPER)
-                 ? RESOURCE_ID_IMAGE_GTA2MAP_EPAPER
-                 : RESOURCE_ID_IMAGE_GTA2MAP;
-  s_bg_bitmap = gbitmap_create_with_resource(res);
+  s_bg_bitmap = gbitmap_create_with_resource(bg_res());
   bitmap_layer_set_bitmap(s_bg_layer, s_bg_bitmap);
-  GColor time_col = (s_theme == THEME_EPAPER) ? GColorWhite : GColorYellow;
+
+  /* swap HUD icon bitmaps */
+  gbitmap_destroy(s_icon_steps_bmp);
+  s_icon_steps_bmp = gbitmap_create_with_resource(
+    icon_res(RESOURCE_ID_IMAGE_HUD_ICON_STEPS, RESOURCE_ID_IMAGE_HUD_ICON_STEPS_MONO));
+  bitmap_layer_set_bitmap(s_icon_steps_layer, s_icon_steps_bmp);
+
+  gbitmap_destroy(s_icon_heart_bmp);
+  s_icon_heart_bmp = gbitmap_create_with_resource(
+    icon_res(RESOURCE_ID_IMAGE_HUD_ICON_HEART, RESOURCE_ID_IMAGE_HUD_ICON_HEART_MONO));
+  bitmap_layer_set_bitmap(s_icon_heart_layer, s_icon_heart_bmp);
+
+  gbitmap_destroy(s_icon_batt_bmp);
+  s_icon_batt_bmp = gbitmap_create_with_resource(
+    icon_res(RESOURCE_ID_IMAGE_HUD_ICON_BATT, RESOURCE_ID_IMAGE_HUD_ICON_BATT_MONO));
+  bitmap_layer_set_bitmap(s_icon_batt_layer, s_icon_batt_bmp);
+
+  /* swap HUD bar bitmaps */
+  gbitmap_destroy(s_bar_steps_bmp);
+  s_bar_steps_bmp = gbitmap_create_with_resource(
+    bar_res(RESOURCE_ID_IMAGE_HUD_BAR_STEPS, RESOURCE_ID_IMAGE_HUD_BAR_STEPS_MONO));
+  bitmap_layer_set_bitmap(s_bar_steps_layer, s_bar_steps_bmp);
+
+  gbitmap_destroy(s_bar_heart_bmp);
+  s_bar_heart_bmp = gbitmap_create_with_resource(
+    bar_res(RESOURCE_ID_IMAGE_HUD_BAR_HEART, RESOURCE_ID_IMAGE_HUD_BAR_HEART_MONO));
+  bitmap_layer_set_bitmap(s_bar_heart_layer, s_bar_heart_bmp);
+
+  gbitmap_destroy(s_bar_batt_bmp);
+  s_bar_batt_bmp = gbitmap_create_with_resource(
+    bar_res(RESOURCE_ID_IMAGE_HUD_BAR_BATT, RESOURCE_ID_IMAGE_HUD_BAR_BATT_MONO));
+  bitmap_layer_set_bitmap(s_bar_batt_layer, s_bar_batt_bmp);
+
+  /* time colour:
+   *   Normal   = yellow
+   *   ePaper   = white (on black box)
+   *   Mono     = black (inverted — black text on white bg)
+   */
+  GColor time_col, time_bg, stat_col;
+  if (s_theme == THEME_MONO) {
+    time_col = GColorWhite;
+    time_bg  = GColorBlack;
+    stat_col = GColorWhite;
+  } else if (s_theme == THEME_EPAPER) {
+    time_col = GColorWhite;
+    time_bg  = GColorBlack;
+    stat_col = GColorWhite;
+  } else {
+    time_col = GColorYellow;
+    time_bg  = GColorBlack;
+    stat_col = GColorWhite;
+  }
   text_layer_set_text_color(s_time_layer, time_col);
-  layer_mark_dirty(bitmap_layer_get_layer(s_bg_layer));
+  text_layer_set_background_color(s_time_layer, time_bg);
+  text_layer_set_text_color(s_date_layer, time_col == GColorBlack ? GColorBlack : GColorWhite);
+  text_layer_set_background_color(s_date_layer, time_bg);
+  text_layer_set_text_color(s_steps_label, stat_col);
+  text_layer_set_text_color(s_heart_label, stat_col);
+  text_layer_set_text_color(s_batt_label,  stat_col);
+
+  layer_mark_dirty(window_get_root_layer(s_window));
 }
 
 /* ── stats ── */
@@ -132,10 +202,7 @@ static void window_load(Window *window) {
   GRect  bounds = layer_get_bounds(root);
 
   /* background */
-  uint32_t bg_res = (s_theme == THEME_EPAPER)
-                    ? RESOURCE_ID_IMAGE_GTA2MAP_EPAPER
-                    : RESOURCE_ID_IMAGE_GTA2MAP;
-  s_bg_bitmap = gbitmap_create_with_resource(bg_res);
+  s_bg_bitmap = gbitmap_create_with_resource(bg_res());
   s_bg_layer  = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_bg_layer, s_bg_bitmap);
   bitmap_layer_set_compositing_mode(s_bg_layer, GCompOpAssign);
@@ -143,32 +210,32 @@ static void window_load(Window *window) {
 
   /* row 1 — steps */
   make_bmp(&s_icon_steps_layer, &s_icon_steps_bmp,
-           RESOURCE_ID_IMAGE_HUD_ICON_STEPS,
+           icon_res(RESOURCE_ID_IMAGE_HUD_ICON_STEPS, RESOURCE_ID_IMAGE_HUD_ICON_STEPS_MONO),
            GRect(LEFT, ROW1_Y, ICON_W, ROW_H), root);
   make_bmp(&s_bar_steps_layer, &s_bar_steps_bmp,
-           RESOURCE_ID_IMAGE_HUD_BAR_STEPS,
+           bar_res(RESOURCE_ID_IMAGE_HUD_BAR_STEPS, RESOURCE_ID_IMAGE_HUD_BAR_STEPS_MONO),
            GRect(BAR_X, ROW1_Y, BAR_W, ROW_H), root);
   s_steps_label = make_stat(GRect(STAT_X, ROW1_Y-1, STAT_W, ROW_H+2), root);
 
   /* row 2 — heart rate */
   make_bmp(&s_icon_heart_layer, &s_icon_heart_bmp,
-           RESOURCE_ID_IMAGE_HUD_ICON_HEART,
+           icon_res(RESOURCE_ID_IMAGE_HUD_ICON_HEART, RESOURCE_ID_IMAGE_HUD_ICON_HEART_MONO),
            GRect(LEFT, ROW2_Y, ICON_W, ROW_H), root);
   make_bmp(&s_bar_heart_layer, &s_bar_heart_bmp,
-           RESOURCE_ID_IMAGE_HUD_BAR_HEART,
+           bar_res(RESOURCE_ID_IMAGE_HUD_BAR_HEART, RESOURCE_ID_IMAGE_HUD_BAR_HEART_MONO),
            GRect(BAR_X, ROW2_Y, BAR_W, ROW_H), root);
   s_heart_label = make_stat(GRect(STAT_X, ROW2_Y-1, STAT_W, ROW_H+2), root);
 
   /* row 3 — battery */
   make_bmp(&s_icon_batt_layer, &s_icon_batt_bmp,
-           RESOURCE_ID_IMAGE_HUD_ICON_BATT,
+           icon_res(RESOURCE_ID_IMAGE_HUD_ICON_BATT, RESOURCE_ID_IMAGE_HUD_ICON_BATT_MONO),
            GRect(LEFT, ROW3_Y, ICON_W, ROW_H), root);
   make_bmp(&s_bar_batt_layer, &s_bar_batt_bmp,
-           RESOURCE_ID_IMAGE_HUD_BAR_BATT,
+           bar_res(RESOURCE_ID_IMAGE_HUD_BAR_BATT, RESOURCE_ID_IMAGE_HUD_BAR_BATT_MONO),
            GRect(BAR_X, ROW3_Y, BAR_W, ROW_H), root);
   s_batt_label = make_stat(GRect(STAT_X, ROW3_Y-1, STAT_W, ROW_H+2), root);
 
-  /* date — bottom right */
+  /* date */
   s_date_layer = text_layer_create(GRect(86, 122, 58, 16));
   text_layer_set_background_color(s_date_layer, GColorBlack);
   text_layer_set_text_color(s_date_layer, GColorWhite);
@@ -176,11 +243,11 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
-  /* time — bottom right, colour depends on theme */
-  GColor time_col = (s_theme == THEME_EPAPER) ? GColorWhite : GColorYellow;
+  /* time */
   s_time_layer = text_layer_create(GRect(74, 138, 70, 30));
   text_layer_set_background_color(s_time_layer, GColorBlack);
-  text_layer_set_text_color(s_time_layer, time_col);
+  text_layer_set_text_color(s_time_layer,
+      (s_theme == THEME_MONO) ? GColorWhite : (s_theme == THEME_EPAPER) ? GColorWhite : GColorYellow);
   text_layer_set_font(s_time_layer,
       fonts_get_system_font(FONT_KEY_LECO_20_BOLD_NUMBERS));
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);

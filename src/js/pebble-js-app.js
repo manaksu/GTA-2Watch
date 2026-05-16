@@ -1,6 +1,6 @@
 /*
  * GTA2 HUD Watchface -- PebbleKit JS
- *   Key 0: KEY_THEME  0=Normal  1=ePaper
+ *   Key 0: KEY_THEME  0=Normal  1=ePaper  2=Monochrome
  */
 function loadCfg() {
   return {
@@ -38,7 +38,11 @@ function buildConfig(c) {
     + '#s{display:block;width:100%;padding:14px;background:#222;color:#fff;border:1px solid #3a3a3a;border-radius:8px;font-size:15px;margin-top:24px;cursor:pointer;box-sizing:border-box}'
     + '</style></head><body>'
     + '<h3>Display Mode</h3>'
-    + radio('theme', ['Normal — Full colour map', 'ePaper — Black & white'], c.theme)
+    + radio('theme', [
+        'Normal \u2014 Full colour map',
+        'ePaper \u2014 Dithered greyscale',
+        'Monochrome \u2014 Inverted black & white'
+      ], c.theme)
     + '<button id="s">Save</button>'
     + '<script>'
     + 'document.getElementById("s").onclick=function(){'
