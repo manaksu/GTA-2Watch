@@ -236,15 +236,15 @@ static void window_load(Window *window) {
   s_batt_label = make_stat(GRect(STAT_X, ROW3_Y-1, STAT_W, ROW_H+2), root);
 
   /* date */
-  s_date_layer = text_layer_create(GRect(86, 122, 58, 16));
+  s_date_layer = text_layer_create(GRect(72, 122, 72, 18));
   text_layer_set_background_color(s_date_layer, GColorBlack);
   text_layer_set_text_color(s_date_layer, GColorWhite);
-  text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_COURIER_18));
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
   /* time */
-  s_time_layer = text_layer_create(GRect(74, 138, 70, 30));
+  s_time_layer = text_layer_create(GRect(72, 140, 72, 28));
   text_layer_set_background_color(s_time_layer, GColorBlack);
   text_layer_set_text_color(s_time_layer,
       (s_theme == THEME_MONO) ? GColorWhite : (s_theme == THEME_EPAPER) ? GColorWhite : GColorYellow);
