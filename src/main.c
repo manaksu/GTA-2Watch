@@ -1,26 +1,23 @@
 #include <pebble.h>
 
 /*
- * HUD layout — 30x14px total in top-left corner
+ * HUD: 30x28px total, top-left corner
+ * icon=7px wide, bar=22px wide, row=8px tall, 2px gap
  *
  *  x=1   x=9
- *  [icon][bar 22px]   y=1  (steps  - blue)
- *  [icon][bar 22px]   y=6  (heart  - yellow)
- *  [icon][bar 22px]   y=11 (batt   - grey)
- *
- *  Each row = 4px tall, 1px gap between rows
- *  icon=7px wide, gap=1px, bar=22px wide => 30px total
+ *  [icon][===bar===]   y=1   steps (blue)
+ *  [icon][===bar===]   y=11  heart (yellow)
+ *  [icon][===bar===]   y=21  batt  (grey)
  */
 #define ICON_W   7
 #define BAR_W   22
-#define ROW_H    4
-#define ROW_GAP  1
+#define ROW_H    8
+#define ROW_GAP  2
 #define LEFT     1
-#define BAR_X   (LEFT + ICON_W + 1)   /* 9 */
-
+#define BAR_X   (LEFT + ICON_W + 1)  /* 9 */
 #define ROW1_Y   1
-#define ROW2_Y  (ROW1_Y + ROW_H + ROW_GAP)   /* 6  */
-#define ROW3_Y  (ROW2_Y + ROW_H + ROW_GAP)   /* 11 */
+#define ROW2_Y  (ROW1_Y + ROW_H + ROW_GAP)   /* 11 */
+#define ROW3_Y  (ROW2_Y + ROW_H + ROW_GAP)   /* 21 */
 
 static Window      *s_window;
 static BitmapLayer *s_bg_layer;
@@ -51,6 +48,7 @@ static void make_bmp(BitmapLayer **bl, GBitmap **bmp,
   *bmp = gbitmap_create_with_resource(res);
   *bl  = bitmap_layer_create(frame);
   bitmap_layer_set_bitmap(*bl, *bmp);
+  /* GCompOpSet lets transparent pixels show the layer below */
   bitmap_layer_set_compositing_mode(*bl, GCompOpSet);
   layer_add_child(root, bitmap_layer_get_layer(*bl));
 }
@@ -66,7 +64,7 @@ static void window_load(Window *window) {
   bitmap_layer_set_compositing_mode(s_bg_layer, GCompOpAssign);
   layer_add_child(root, bitmap_layer_get_layer(s_bg_layer));
 
-  /* row 1 — steps */
+  /* row 1 - steps */
   make_bmp(&s_icon_steps_layer, &s_icon_steps_bmp,
            RESOURCE_ID_IMAGE_HUD_ICON_STEPS,
            GRect(LEFT, ROW1_Y, ICON_W, ROW_H), root);
@@ -74,7 +72,7 @@ static void window_load(Window *window) {
            RESOURCE_ID_IMAGE_HUD_BAR_STEPS,
            GRect(BAR_X, ROW1_Y, BAR_W, ROW_H), root);
 
-  /* row 2 — heart rate */
+  /* row 2 - heart rate */
   make_bmp(&s_icon_heart_layer, &s_icon_heart_bmp,
            RESOURCE_ID_IMAGE_HUD_ICON_HEART,
            GRect(LEFT, ROW2_Y, ICON_W, ROW_H), root);
@@ -82,7 +80,7 @@ static void window_load(Window *window) {
            RESOURCE_ID_IMAGE_HUD_BAR_HEART,
            GRect(BAR_X, ROW2_Y, BAR_W, ROW_H), root);
 
-  /* row 3 — battery */
+  /* row 3 - battery */
   make_bmp(&s_icon_batt_layer, &s_icon_batt_bmp,
            RESOURCE_ID_IMAGE_HUD_ICON_BATT,
            GRect(LEFT, ROW3_Y, ICON_W, ROW_H), root);
@@ -90,7 +88,7 @@ static void window_load(Window *window) {
            RESOURCE_ID_IMAGE_HUD_BAR_BATT,
            GRect(BAR_X, ROW3_Y, BAR_W, ROW_H), root);
 
-  /* date — bottom-right */
+  /* date - bottom right */
   s_date_layer = text_layer_create(GRect(86, 122, 58, 16));
   text_layer_set_background_color(s_date_layer, GColorBlack);
   text_layer_set_text_color(s_date_layer, GColorWhite);
@@ -98,7 +96,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
-  /* time — bottom-right */
+  /* time - bottom right */
   s_time_layer = text_layer_create(GRect(74, 138, 70, 30));
   text_layer_set_background_color(s_time_layer, GColorBlack);
   text_layer_set_text_color(s_time_layer, GColorYellow);
