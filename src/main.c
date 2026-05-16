@@ -1,28 +1,28 @@
 #include <pebble.h>
 
 /*
- * HUD layout — top-left corner
- *
- *  x=1   x=9        x=32  x=34
- *  [icon][==bar 22==] [stat text]   y=1   steps
- *  [icon][==bar 22==] [stat text]   y=11  heart
- *  [icon][==bar 22==] [stat text]   y=21  batt
- *
- *  icon=7px, bar=22px, gap=1px between each
- *  stat text starts at x=32, width=50px (to screen edge)
- *  row height=8px, row gap=2px
+ * GTA2 HUD Watchface
+ *   Key 0: KEY_THEME  0=Normal  1=ePaper
  */
+
+#define KEY_THEME    0
+#define THEME_NORMAL 0
+#define THEME_EPAPER 1
+
+/* ── HUD layout ── */
 #define ICON_W    7
 #define BAR_W    22
 #define ROW_H     8
 #define ROW_GAP   2
 #define LEFT      1
-#define BAR_X    (LEFT + ICON_W + 1)   /* 9  */
-#define STAT_X   (BAR_X + BAR_W + 2)   /* 33 */
-#define STAT_W   (144 - STAT_X)         /* 111 */
+#define BAR_X    (LEFT + ICON_W + 1)
+#define STAT_X   (BAR_X + BAR_W + 2)
+#define STAT_W   (144 - STAT_X)
 #define ROW1_Y    1
-#define ROW2_Y   (ROW1_Y + ROW_H + ROW_GAP)   /* 11 */
-#define ROW3_Y   (ROW2_Y + ROW_H + ROW_GAP)   /* 21 */
+#define ROW2_Y   (ROW1_Y + ROW_H + ROW_GAP)
+#define ROW3_Y   (ROW2_Y + ROW_H + ROW_GAP)
+
+static int s_theme = THEME_NORMAL;
 
 static Window      *s_window;
 static BitmapLayer *s_bg_layer;
@@ -36,17 +36,27 @@ static GBitmap     *s_bar_steps_bmp,    *s_bar_heart_bmp,    *s_bar_batt_bmp;
 static TextLayer   *s_steps_label, *s_heart_label, *s_batt_label;
 static TextLayer   *s_time_layer, *s_date_layer;
 
-static char s_time_buf[6];
-static char s_date_buf[10];
-static char s_steps_buf[8];
-static char s_heart_buf[6];
-static char s_batt_buf[6];
+static char s_time_buf[6], s_date_buf[10];
+static char s_steps_buf[8], s_heart_buf[6], s_batt_buf[6];
+
+/* ── apply theme ── */
+static void apply_theme(void) {
+  if (s_bg_bitmap) gbitmap_destroy(s_bg_bitmap);
+  uint32_t res = (s_theme == THEME_EPAPER)
+                 ? RESOURCE_ID_IMAGE_GTA2MAP_EPAPER
+                 : RESOURCE_ID_IMAGE_GTA2MAP;
+  s_bg_bitmap = gbitmap_create_with_resource(res);
+  bitmap_layer_set_bitmap(s_bg_layer, s_bg_bitmap);
+  GColor time_col = (s_theme == THEME_EPAPER) ? GColorWhite : GColorYellow;
+  text_layer_set_text_color(s_time_layer, time_col);
+  layer_mark_dirty(bitmap_layer_get_layer(s_bg_layer));
+}
 
 /* ── stats ── */
 static void update_stats(void) {
-  /* Steps */
   time_t t_end   = time(NULL);
   time_t t_start = time_start_of_today();
+
   if (t_start < t_end &&
       health_service_metric_accessible(HealthMetricStepCount, t_start, t_end)) {
     snprintf(s_steps_buf, sizeof(s_steps_buf), "%d",
@@ -55,24 +65,17 @@ static void update_stats(void) {
     snprintf(s_steps_buf, sizeof(s_steps_buf), "--");
   }
 
-  /* Heart rate */
   HealthServiceAccessibilityMask hr =
-    health_service_metric_accessible(HealthMetricHeartRateBPM,
-                                     t_end - 60, t_end);
+    health_service_metric_accessible(HealthMetricHeartRateBPM, t_end-60, t_end);
   if (hr & HealthServiceAccessibilityMaskAvailable) {
     HealthValue v = health_service_peek_current_value(HealthMetricHeartRateBPM);
-    if (v > 0)
-      snprintf(s_heart_buf, sizeof(s_heart_buf), "%d", (int)v);
-    else
-      snprintf(s_heart_buf, sizeof(s_heart_buf), "--");
+    snprintf(s_heart_buf, sizeof(s_heart_buf), v > 0 ? "%d" : "--", (int)v);
   } else {
     snprintf(s_heart_buf, sizeof(s_heart_buf), "--");
   }
 
-  /* Battery */
   BatteryChargeState bat = battery_state_service_peek();
-  snprintf(s_batt_buf, sizeof(s_batt_buf), "%d%%",
-           (int)bat.charge_percent);
+  snprintf(s_batt_buf, sizeof(s_batt_buf), "%d%%", (int)bat.charge_percent);
 
   text_layer_set_text(s_steps_label, s_steps_buf);
   text_layer_set_text(s_heart_label, s_heart_buf);
@@ -91,6 +94,16 @@ static void update_time(struct tm *t) {
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time(tick_time);
   if (tick_time->tm_min % 5 == 0) update_stats();
+}
+
+/* ── AppMessage ── */
+static void inbox_received(DictionaryIterator *iter, void *ctx) {
+  Tuple *t = dict_find(iter, KEY_THEME);
+  if (t) {
+    s_theme = (int)t->value->int32;
+    persist_write_int(KEY_THEME, s_theme);
+    apply_theme();
+  }
 }
 
 /* ── helpers ── */
@@ -119,7 +132,10 @@ static void window_load(Window *window) {
   GRect  bounds = layer_get_bounds(root);
 
   /* background */
-  s_bg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_GTA2MAP);
+  uint32_t bg_res = (s_theme == THEME_EPAPER)
+                    ? RESOURCE_ID_IMAGE_GTA2MAP_EPAPER
+                    : RESOURCE_ID_IMAGE_GTA2MAP;
+  s_bg_bitmap = gbitmap_create_with_resource(bg_res);
   s_bg_layer  = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_bg_layer, s_bg_bitmap);
   bitmap_layer_set_compositing_mode(s_bg_layer, GCompOpAssign);
@@ -132,7 +148,7 @@ static void window_load(Window *window) {
   make_bmp(&s_bar_steps_layer, &s_bar_steps_bmp,
            RESOURCE_ID_IMAGE_HUD_BAR_STEPS,
            GRect(BAR_X, ROW1_Y, BAR_W, ROW_H), root);
-  s_steps_label = make_stat(GRect(STAT_X, ROW1_Y - 1, STAT_W, ROW_H + 2), root);
+  s_steps_label = make_stat(GRect(STAT_X, ROW1_Y-1, STAT_W, ROW_H+2), root);
 
   /* row 2 — heart rate */
   make_bmp(&s_icon_heart_layer, &s_icon_heart_bmp,
@@ -141,7 +157,7 @@ static void window_load(Window *window) {
   make_bmp(&s_bar_heart_layer, &s_bar_heart_bmp,
            RESOURCE_ID_IMAGE_HUD_BAR_HEART,
            GRect(BAR_X, ROW2_Y, BAR_W, ROW_H), root);
-  s_heart_label = make_stat(GRect(STAT_X, ROW2_Y - 1, STAT_W, ROW_H + 2), root);
+  s_heart_label = make_stat(GRect(STAT_X, ROW2_Y-1, STAT_W, ROW_H+2), root);
 
   /* row 3 — battery */
   make_bmp(&s_icon_batt_layer, &s_icon_batt_bmp,
@@ -150,7 +166,7 @@ static void window_load(Window *window) {
   make_bmp(&s_bar_batt_layer, &s_bar_batt_bmp,
            RESOURCE_ID_IMAGE_HUD_BAR_BATT,
            GRect(BAR_X, ROW3_Y, BAR_W, ROW_H), root);
-  s_batt_label = make_stat(GRect(STAT_X, ROW3_Y - 1, STAT_W, ROW_H + 2), root);
+  s_batt_label = make_stat(GRect(STAT_X, ROW3_Y-1, STAT_W, ROW_H+2), root);
 
   /* date — bottom right */
   s_date_layer = text_layer_create(GRect(86, 122, 58, 16));
@@ -160,10 +176,11 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
-  /* time — bottom right */
+  /* time — bottom right, colour depends on theme */
+  GColor time_col = (s_theme == THEME_EPAPER) ? GColorWhite : GColorYellow;
   s_time_layer = text_layer_create(GRect(74, 138, 70, 30));
   text_layer_set_background_color(s_time_layer, GColorBlack);
-  text_layer_set_text_color(s_time_layer, GColorYellow);
+  text_layer_set_text_color(s_time_layer, time_col);
   text_layer_set_font(s_time_layer,
       fonts_get_system_font(FONT_KEY_LECO_20_BOLD_NUMBERS));
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
@@ -197,6 +214,10 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
+  s_theme = persist_exists(KEY_THEME)
+            ? persist_read_int(KEY_THEME)
+            : THEME_NORMAL;
+
   s_window = window_create();
   window_set_background_color(s_window, GColorBlack);
   window_set_window_handlers(s_window, (WindowHandlers){
@@ -205,6 +226,8 @@ static void init(void) {
   });
   window_stack_push(s_window, true);
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  app_message_open(64, 64);
+  app_message_register_inbox_received(inbox_received);
 }
 
 static void deinit(void) {

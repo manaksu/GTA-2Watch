@@ -7,19 +7,22 @@
   "sdkVersion": "3",
   "targetPlatforms": ["basalt"],
   "watchapp": { "watchface": true },
-  "appKeys": {},
+  "appKeys": {
+    "KEY_THEME": 0
+  },
   "resources": {
     "media": [
-      { "type": "bitmap", "name": "IMAGE_GTA2MAP",        "file": "images/gta2map.png",       "storageFormat": "pbi" },
-      { "type": "bitmap", "name": "IMAGE_HUD_ICON_STEPS", "file": "images/hud_icon_steps.png","storageFormat": "pbi" },
-      { "type": "bitmap", "name": "IMAGE_HUD_ICON_HEART", "file": "images/hud_icon_heart.png","storageFormat": "pbi" },
-      { "type": "bitmap", "name": "IMAGE_HUD_ICON_BATT",  "file": "images/hud_icon_batt.png", "storageFormat": "pbi" },
-      { "type": "bitmap", "name": "IMAGE_HUD_BAR_STEPS",  "file": "images/hud_bar_steps.png", "storageFormat": "pbi" },
-      { "type": "bitmap", "name": "IMAGE_HUD_BAR_HEART",  "file": "images/hud_bar_heart.png", "storageFormat": "pbi" },
-      { "type": "bitmap", "name": "IMAGE_HUD_BAR_BATT",   "file": "images/hud_bar_batt.png",  "storageFormat": "pbi" }
+      { "type": "bitmap", "name": "IMAGE_GTA2MAP",        "file": "images/gta2map.png",        "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_GTA2MAP_EPAPER", "file": "images/gta2map_epaper.png", "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_STEPS", "file": "images/hud_icon_steps.png", "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_HEART", "file": "images/hud_icon_heart.png", "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_BATT",  "file": "images/hud_icon_batt.png",  "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_STEPS",  "file": "images/hud_bar_steps.png",  "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_HEART",  "file": "images/hud_bar_heart.png",  "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_BATT",   "file": "images/hud_bar_batt.png",   "storageFormat": "pbi" }
     ]
   },
-  "capabilities": ["health"],
+  "capabilities": ["health", "configurable"],
   "projectType": "native",
   "messageKeys": {}
 }
