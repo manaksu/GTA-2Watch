@@ -105,7 +105,7 @@ static void make_bmp(BitmapLayer **bl, GBitmap **bmp,
 
 static TextLayer *make_stat(GRect frame, Layer *root) {
   TextLayer *tl = text_layer_create(frame);
-  text_layer_set_background_color(tl, GColorBlack);
+  text_layer_set_background_color(tl, GColorClear);
   text_layer_set_text_color(tl, GColorWhite);
   text_layer_set_font(tl, fonts_get_system_font(FONT_KEY_GOTHIC_09));
   text_layer_set_text_alignment(tl, GTextAlignmentLeft);
