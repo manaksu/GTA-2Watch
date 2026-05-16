@@ -15,11 +15,11 @@
 #define BAR_W    22
 #define ROW_H     8
 #define ROW_GAP   2
-#define LEFT      1
+#define LEFT      5
 #define BAR_X    (LEFT + ICON_W + 1)
 #define STAT_X   (BAR_X + BAR_W + 2)
 #define STAT_W   (144 - STAT_X)
-#define ROW1_Y    1
+#define ROW1_Y    6
 #define ROW2_Y   (ROW1_Y + ROW_H + ROW_GAP)
 #define ROW3_Y   (ROW2_Y + ROW_H + ROW_GAP)
 
