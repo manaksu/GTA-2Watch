@@ -1,7 +1,7 @@
 {
-  "uuid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-  "shortName": "GTA2Watch",
-  "longName": "GTA2 Map Watchface",
+  "uuid": "d4e5f6a7-b8c9-0123-defa-234567890123",
+  "shortName": "GTA2HUD",
+  "longName": "GTA2 HUD Watchface",
   "companyName": "manaksu",
   "versionLabel": "1.0",
   "sdkVersion": "3",
@@ -17,10 +17,46 @@
         "name": "IMAGE_GTA2MAP",
         "file": "images/gta2map.png",
         "storageFormat": "pbi"
+      },
+      {
+        "type": "bitmap",
+        "name": "IMAGE_ICON_STEPS",
+        "file": "images/icon_steps.png",
+        "storageFormat": "pbi"
+      },
+      {
+        "type": "bitmap",
+        "name": "IMAGE_ICON_HEART",
+        "file": "images/icon_heart.png",
+        "storageFormat": "pbi"
+      },
+      {
+        "type": "bitmap",
+        "name": "IMAGE_ICON_BATT",
+        "file": "images/icon_batt.png",
+        "storageFormat": "pbi"
+      },
+      {
+        "type": "bitmap",
+        "name": "IMAGE_BAR_STEPS",
+        "file": "images/bar_steps.png",
+        "storageFormat": "pbi"
+      },
+      {
+        "type": "bitmap",
+        "name": "IMAGE_BAR_HEART",
+        "file": "images/bar_heart.png",
+        "storageFormat": "pbi"
+      },
+      {
+        "type": "bitmap",
+        "name": "IMAGE_BAR_BATT",
+        "file": "images/bar_batt.png",
+        "storageFormat": "pbi"
       }
     ]
   },
-  "capabilities": [],
+  "capabilities": ["health"],
   "projectType": "native",
   "messageKeys": {}
 }
