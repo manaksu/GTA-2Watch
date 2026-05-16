@@ -26,14 +26,17 @@ static void window_load(Window *window) {
   Layer *root   = window_get_root_layer(window);
   GRect  bounds = layer_get_bounds(root);  /* 144 x 168 */
 
-  /* full-screen background */
+  /* full-screen background
+   * NAME must match "name" field in package.json exactly:
+   * RESOURCE_ID_<name> — so "IMAGE_GTA2MAP" -> RESOURCE_ID_IMAGE_GTA2MAP
+   * If you renamed it in CloudPebble, update the define below to match. */
   s_bg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_GTA2MAP);
   s_bg_layer  = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_bg_layer, s_bg_bitmap);
   bitmap_layer_set_compositing_mode(s_bg_layer, GCompOpAssign);
   layer_add_child(root, bitmap_layer_get_layer(s_bg_layer));
 
-  /* date — bottom-right, above time, 58px wide */
+  /* date — bottom-right, above time */
   s_date_layer = text_layer_create(GRect(86, 122, 58, 16));
   text_layer_set_background_color(s_date_layer, GColorBlack);
   text_layer_set_text_color(s_date_layer, GColorWhite);
@@ -42,7 +45,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
-  /* time — bottom-right corner, 70px wide x 30px tall */
+  /* time — bottom-right corner */
   s_time_layer = text_layer_create(GRect(74, 138, 70, 30));
   text_layer_set_background_color(s_time_layer, GColorBlack);
   text_layer_set_text_color(s_time_layer, GColorYellow);
@@ -72,7 +75,8 @@ static void init(void) {
     .unload = window_unload,
   });
   window_stack_push(s_window, true);
-  tick_timer_service_subscribe(MINUTE_UNITS, tick_handler);
+  /* FIX: SDK 3 uses MINUTE_UNIT (no S) */
+  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }
 
 static void deinit(void) {
