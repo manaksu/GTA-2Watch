@@ -1,9 +1,9 @@
 {
-  "uuid": "d4e5f6a7-b8c9-0123-defa-234567890123",
+  "uuid": "79e1f62d-11e1-43f6-a8bb-72060f45fd9e",
   "shortName": "GTA2HUD",
-  "longName": "GTA2 HUD Watchface",
+  "longName": "Game Watch",
   "companyName": "manaksu",
-  "versionLabel": "1.0",
+  "versionLabel": "1.30",
   "sdkVersion": "3",
   "targetPlatforms": ["basalt"],
   "watchapp": { "watchface": true },
