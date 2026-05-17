@@ -2,12 +2,16 @@
 
 /*
  * GTA2 HUD Watchface
- *   Key 0: KEY_THEME  0=Normal  1=ePaper  2=Monochrome
- *   Key 1: KEY_SCENE  0=Industrial  1=Downtown  2=Residential
+ *   Key 0: KEY_THEME     0=Normal  1=ePaper  2=Monochrome
+ *   Key 1: KEY_SCENE     0=Industrial  1=Downtown  2=Residential
+ *   Key 2: KEY_TIME_COL  0=Yellow  1=White  2=Light Grey
+ *   Key 3: KEY_DATE_COL  0=White   1=Yellow  2=Light Grey
  */
 
-#define KEY_THEME      0
-#define KEY_SCENE      1
+#define KEY_THEME     0
+#define KEY_SCENE     1
+#define KEY_TIME_COL  2
+#define KEY_DATE_COL  3
 
 #define THEME_NORMAL   0
 #define THEME_EPAPER   1
@@ -16,6 +20,10 @@
 #define SCENE_INDUSTRIAL  0
 #define SCENE_DOWNTOWN    1
 #define SCENE_RESIDENTIAL 2
+
+#define COL_YELLOW     0
+#define COL_WHITE      1
+#define COL_LIGHTGREY  2
 
 /* ── HUD layout ── */
 #define ICON_W    7
@@ -30,8 +38,20 @@
 #define ROW2_Y   (ROW1_Y + ROW_H + ROW_GAP)
 #define ROW3_Y   (ROW2_Y + ROW_H + ROW_GAP)
 
-static int s_theme = THEME_NORMAL;
-static int s_scene = SCENE_INDUSTRIAL;
+#define DATE_W   44
+#define DATE_H   14
+#define DATE_X  (144 - DATE_W)
+#define DATE_Y  122
+
+#define TIME_W   62
+#define TIME_H   24
+#define TIME_X  (144 - TIME_W)
+#define TIME_Y  (DATE_Y + DATE_H + 1)
+
+static int s_theme    = THEME_NORMAL;
+static int s_scene    = SCENE_INDUSTRIAL;
+static int s_time_col = COL_YELLOW;
+static int s_date_col = COL_WHITE;
 
 static Window      *s_window;
 static BitmapLayer *s_bg_layer;
@@ -44,11 +64,32 @@ static GBitmap     *s_bar_steps_bmp,    *s_bar_heart_bmp,    *s_bar_batt_bmp;
 
 static TextLayer   *s_steps_label, *s_heart_label, *s_batt_label;
 static TextLayer   *s_time_layer, *s_date_layer;
+static Layer       *s_bg_date_layer, *s_bg_time_layer;
 
 static char s_time_buf[6], s_date_buf[10];
 static char s_steps_buf[8], s_heart_buf[6], s_batt_buf[6];
 
-/* ── background resource selector ── */
+/* ── colour helper ── */
+static GColor resolve_col(int col_setting) {
+  switch (col_setting) {
+    case COL_WHITE:     return GColorWhite;
+    case COL_LIGHTGREY: return GColorLightGray;
+    default:            return GColorYellow;
+  }
+}
+
+/* ── stipple semi-transparent background ── */
+static void draw_stipple(Layer *layer, GContext *ctx) {
+  GRect b = layer_get_bounds(layer);
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  for (int y = 0; y < b.size.h; y++) {
+    for (int x = (y % 2); x < b.size.w; x += 2) {
+      graphics_draw_pixel(ctx, GPoint(x, y));
+    }
+  }
+}
+
+/* ── background resource ── */
 static uint32_t bg_res(void) {
   if (s_scene == SCENE_DOWNTOWN) {
     if (s_theme == THEME_EPAPER) return RESOURCE_ID_IMAGE_MAP_DOWNTOWN_EPAPER;
@@ -60,19 +101,19 @@ static uint32_t bg_res(void) {
     if (s_theme == THEME_MONO)   return RESOURCE_ID_IMAGE_MAP_RESIDENTIAL_MONO;
     return RESOURCE_ID_IMAGE_MAP_RESIDENTIAL;
   }
-  /* Industrial (default) */
   if (s_theme == THEME_EPAPER) return RESOURCE_ID_IMAGE_MAP_INDUSTRIAL_EPAPER;
   if (s_theme == THEME_MONO)   return RESOURCE_ID_IMAGE_MAP_INDUSTRIAL_MONO;
   return RESOURCE_ID_IMAGE_MAP_INDUSTRIAL;
 }
 
-/* ── apply theme/scene ── */
+/* ── apply all settings ── */
 static void apply_theme(void) {
+  /* background */
   if (s_bg_bitmap) gbitmap_destroy(s_bg_bitmap);
   s_bg_bitmap = gbitmap_create_with_resource(bg_res());
   bitmap_layer_set_bitmap(s_bg_layer, s_bg_bitmap);
 
-  /* swap HUD icons */
+  /* HUD icons */
   gbitmap_destroy(s_icon_steps_bmp);
   s_icon_steps_bmp = gbitmap_create_with_resource(
     s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_STEPS_MONO : RESOURCE_ID_IMAGE_HUD_ICON_STEPS);
@@ -88,7 +129,7 @@ static void apply_theme(void) {
     s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_BATT_MONO : RESOURCE_ID_IMAGE_HUD_ICON_BATT);
   bitmap_layer_set_bitmap(s_icon_batt_layer, s_icon_batt_bmp);
 
-  /* swap HUD bars */
+  /* HUD bars */
   gbitmap_destroy(s_bar_steps_bmp);
   s_bar_steps_bmp = gbitmap_create_with_resource(
     s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_STEPS_MONO : RESOURCE_ID_IMAGE_HUD_BAR_STEPS);
@@ -104,13 +145,9 @@ static void apply_theme(void) {
     s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_BATT_MONO : RESOURCE_ID_IMAGE_HUD_BAR_BATT);
   bitmap_layer_set_bitmap(s_bar_batt_layer, s_bar_batt_bmp);
 
-  /* time/stat colours */
-  GColor time_col = (s_theme == THEME_EPAPER || s_theme == THEME_MONO)
-                    ? GColorWhite : GColorYellow;
-  text_layer_set_text_color(s_time_layer, time_col);
-  text_layer_set_text_color(s_steps_label, GColorWhite);
-  text_layer_set_text_color(s_heart_label, GColorWhite);
-  text_layer_set_text_color(s_batt_label,  GColorWhite);
+  /* time & date colours */
+  text_layer_set_text_color(s_time_layer, resolve_col(s_time_col));
+  text_layer_set_text_color(s_date_layer, resolve_col(s_date_col));
 
   layer_mark_dirty(window_get_root_layer(s_window));
 }
@@ -119,7 +156,6 @@ static void apply_theme(void) {
 static void update_stats(void) {
   time_t t_end   = time(NULL);
   time_t t_start = time_start_of_today();
-
   if (t_start < t_end &&
       health_service_metric_accessible(HealthMetricStepCount, t_start, t_end)) {
     snprintf(s_steps_buf, sizeof(s_steps_buf), "%d",
@@ -127,7 +163,6 @@ static void update_stats(void) {
   } else {
     snprintf(s_steps_buf, sizeof(s_steps_buf), "--");
   }
-
   HealthServiceAccessibilityMask hr =
     health_service_metric_accessible(HealthMetricHeartRateBPM, t_end-60, t_end);
   if (hr & HealthServiceAccessibilityMaskAvailable) {
@@ -136,10 +171,8 @@ static void update_stats(void) {
   } else {
     snprintf(s_heart_buf, sizeof(s_heart_buf), "--");
   }
-
   BatteryChargeState bat = battery_state_service_peek();
   snprintf(s_batt_buf, sizeof(s_batt_buf), "%d%%", (int)bat.charge_percent);
-
   text_layer_set_text(s_steps_label, s_steps_buf);
   text_layer_set_text(s_heart_label, s_heart_buf);
   text_layer_set_text(s_batt_label,  s_batt_buf);
@@ -161,17 +194,16 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 /* ── AppMessage ── */
 static void inbox_received(DictionaryIterator *iter, void *ctx) {
-  Tuple *t = dict_find(iter, KEY_THEME);
-  if (t) {
-    s_theme = (int)t->value->int32;
-    persist_write_int(KEY_THEME, s_theme);
-  }
-  Tuple *s = dict_find(iter, KEY_SCENE);
-  if (s) {
-    s_scene = (int)s->value->int32;
-    persist_write_int(KEY_SCENE, s_scene);
-  }
-  if (t || s) apply_theme();
+  Tuple *t;
+  t = dict_find(iter, KEY_THEME);
+  if (t) { s_theme    = (int)t->value->int32; persist_write_int(KEY_THEME,    s_theme);    }
+  t = dict_find(iter, KEY_SCENE);
+  if (t) { s_scene    = (int)t->value->int32; persist_write_int(KEY_SCENE,    s_scene);    }
+  t = dict_find(iter, KEY_TIME_COL);
+  if (t) { s_time_col = (int)t->value->int32; persist_write_int(KEY_TIME_COL, s_time_col); }
+  t = dict_find(iter, KEY_DATE_COL);
+  if (t) { s_date_col = (int)t->value->int32; persist_write_int(KEY_DATE_COL, s_date_col); }
+  apply_theme();
 }
 
 /* ── helpers ── */
@@ -205,37 +237,46 @@ static void window_load(Window *window) {
   bitmap_layer_set_compositing_mode(s_bg_layer, GCompOpAssign);
   layer_add_child(root, bitmap_layer_get_layer(s_bg_layer));
 
-  uint32_t icon_s = s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_STEPS_MONO : RESOURCE_ID_IMAGE_HUD_ICON_STEPS;
-  uint32_t icon_h = s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_HEART_MONO : RESOURCE_ID_IMAGE_HUD_ICON_HEART;
-  uint32_t icon_b = s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_BATT_MONO  : RESOURCE_ID_IMAGE_HUD_ICON_BATT;
-  uint32_t bar_s  = s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_STEPS_MONO  : RESOURCE_ID_IMAGE_HUD_BAR_STEPS;
-  uint32_t bar_h  = s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_HEART_MONO  : RESOURCE_ID_IMAGE_HUD_BAR_HEART;
-  uint32_t bar_b  = s_theme == THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_BATT_MONO   : RESOURCE_ID_IMAGE_HUD_BAR_BATT;
+  uint32_t icon_s = s_theme==THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_STEPS_MONO : RESOURCE_ID_IMAGE_HUD_ICON_STEPS;
+  uint32_t icon_h = s_theme==THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_HEART_MONO : RESOURCE_ID_IMAGE_HUD_ICON_HEART;
+  uint32_t icon_b = s_theme==THEME_MONO ? RESOURCE_ID_IMAGE_HUD_ICON_BATT_MONO  : RESOURCE_ID_IMAGE_HUD_ICON_BATT;
+  uint32_t bar_s  = s_theme==THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_STEPS_MONO  : RESOURCE_ID_IMAGE_HUD_BAR_STEPS;
+  uint32_t bar_h  = s_theme==THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_HEART_MONO  : RESOURCE_ID_IMAGE_HUD_BAR_HEART;
+  uint32_t bar_b  = s_theme==THEME_MONO ? RESOURCE_ID_IMAGE_HUD_BAR_BATT_MONO   : RESOURCE_ID_IMAGE_HUD_BAR_BATT;
 
-  make_bmp(&s_icon_steps_layer, &s_icon_steps_bmp, icon_s, GRect(LEFT, ROW1_Y, ICON_W, ROW_H), root);
-  make_bmp(&s_bar_steps_layer,  &s_bar_steps_bmp,  bar_s,  GRect(BAR_X, ROW1_Y, BAR_W, ROW_H), root);
+  make_bmp(&s_icon_steps_layer, &s_icon_steps_bmp, icon_s, GRect(LEFT,  ROW1_Y, ICON_W, ROW_H), root);
+  make_bmp(&s_bar_steps_layer,  &s_bar_steps_bmp,  bar_s,  GRect(BAR_X, ROW1_Y, BAR_W,  ROW_H), root);
   s_steps_label = make_stat(GRect(STAT_X, ROW1_Y-1, STAT_W, ROW_H+2), root);
 
-  make_bmp(&s_icon_heart_layer, &s_icon_heart_bmp, icon_h, GRect(LEFT, ROW2_Y, ICON_W, ROW_H), root);
-  make_bmp(&s_bar_heart_layer,  &s_bar_heart_bmp,  bar_h,  GRect(BAR_X, ROW2_Y, BAR_W, ROW_H), root);
+  make_bmp(&s_icon_heart_layer, &s_icon_heart_bmp, icon_h, GRect(LEFT,  ROW2_Y, ICON_W, ROW_H), root);
+  make_bmp(&s_bar_heart_layer,  &s_bar_heart_bmp,  bar_h,  GRect(BAR_X, ROW2_Y, BAR_W,  ROW_H), root);
   s_heart_label = make_stat(GRect(STAT_X, ROW2_Y-1, STAT_W, ROW_H+2), root);
 
-  make_bmp(&s_icon_batt_layer,  &s_icon_batt_bmp,  icon_b, GRect(LEFT, ROW3_Y, ICON_W, ROW_H), root);
-  make_bmp(&s_bar_batt_layer,   &s_bar_batt_bmp,   bar_b,  GRect(BAR_X, ROW3_Y, BAR_W, ROW_H), root);
+  make_bmp(&s_icon_batt_layer,  &s_icon_batt_bmp,  icon_b, GRect(LEFT,  ROW3_Y, ICON_W, ROW_H), root);
+  make_bmp(&s_bar_batt_layer,   &s_bar_batt_bmp,   bar_b,  GRect(BAR_X, ROW3_Y, BAR_W,  ROW_H), root);
   s_batt_label = make_stat(GRect(STAT_X, ROW3_Y-1, STAT_W, ROW_H+2), root);
 
-  s_date_layer = text_layer_create(GRect(72, 122, 72, 18));
-  text_layer_set_background_color(s_date_layer, GColorBlack);
-  text_layer_set_text_color(s_date_layer, GColorWhite);
-  text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  /* stipple bg layers */
+  s_bg_date_layer = layer_create(GRect(DATE_X, DATE_Y, DATE_W, DATE_H));
+  layer_set_update_proc(s_bg_date_layer, draw_stipple);
+  layer_add_child(root, s_bg_date_layer);
+
+  s_bg_time_layer = layer_create(GRect(TIME_X, TIME_Y, TIME_W, TIME_H));
+  layer_set_update_proc(s_bg_time_layer, draw_stipple);
+  layer_add_child(root, s_bg_time_layer);
+
+  /* date */
+  s_date_layer = text_layer_create(GRect(DATE_X, DATE_Y, DATE_W, DATE_H));
+  text_layer_set_background_color(s_date_layer, GColorClear);
+  text_layer_set_text_color(s_date_layer, resolve_col(s_date_col));
+  text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_date_layer));
 
-  GColor time_col = (s_theme == THEME_EPAPER || s_theme == THEME_MONO)
-                    ? GColorWhite : GColorYellow;
-  s_time_layer = text_layer_create(GRect(72, 140, 72, 28));
-  text_layer_set_background_color(s_time_layer, GColorBlack);
-  text_layer_set_text_color(s_time_layer, time_col);
+  /* time */
+  s_time_layer = text_layer_create(GRect(TIME_X, TIME_Y, TIME_W, TIME_H));
+  text_layer_set_background_color(s_time_layer, GColorClear);
+  text_layer_set_text_color(s_time_layer, resolve_col(s_time_col));
   text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_LECO_20_BOLD_NUMBERS));
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
   layer_add_child(root, text_layer_get_layer(s_time_layer));
@@ -251,6 +292,8 @@ static void window_unload(Window *window) {
   text_layer_destroy(s_batt_label);
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_date_layer);
+  layer_destroy(s_bg_date_layer);
+  layer_destroy(s_bg_time_layer);
   bitmap_layer_destroy(s_bg_layer);
   bitmap_layer_destroy(s_icon_steps_layer);
   bitmap_layer_destroy(s_bar_steps_layer);
@@ -268,8 +311,10 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
-  s_theme = persist_exists(KEY_THEME) ? persist_read_int(KEY_THEME) : THEME_NORMAL;
-  s_scene = persist_exists(KEY_SCENE) ? persist_read_int(KEY_SCENE) : SCENE_INDUSTRIAL;
+  s_theme    = persist_exists(KEY_THEME)    ? persist_read_int(KEY_THEME)    : THEME_NORMAL;
+  s_scene    = persist_exists(KEY_SCENE)    ? persist_read_int(KEY_SCENE)    : SCENE_INDUSTRIAL;
+  s_time_col = persist_exists(KEY_TIME_COL) ? persist_read_int(KEY_TIME_COL) : COL_YELLOW;
+  s_date_col = persist_exists(KEY_DATE_COL) ? persist_read_int(KEY_DATE_COL) : COL_WHITE;
 
   s_window = window_create();
   window_set_background_color(s_window, GColorBlack);
@@ -279,7 +324,7 @@ static void init(void) {
   });
   window_stack_push(s_window, true);
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-  app_message_open(64, 64);
+  app_message_open(128, 64);
   app_message_register_inbox_received(inbox_received);
 }
 

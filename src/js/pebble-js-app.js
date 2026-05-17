@@ -1,21 +1,27 @@
 /*
  * GTA2 HUD Watchface -- PebbleKit JS
- *   Key 0: KEY_THEME  0=Normal  1=ePaper  2=Monochrome
- *   Key 1: KEY_SCENE  0=Industrial  1=Downtown  2=Residential
+ *   Key 0: KEY_THEME     0=Normal  1=ePaper  2=Monochrome
+ *   Key 1: KEY_SCENE     0=Industrial  1=Downtown  2=Residential
+ *   Key 2: KEY_TIME_COL  0=Yellow  1=White  2=Light Grey
+ *   Key 3: KEY_DATE_COL  0=White   1=Yellow  2=Light Grey
  */
 function loadCfg() {
   return {
-    theme: +(localStorage.getItem('theme') || '0'),
-    scene: +(localStorage.getItem('scene') || '0')
+    theme:    +(localStorage.getItem('theme')    || '0'),
+    scene:    +(localStorage.getItem('scene')    || '0'),
+    timecol:  +(localStorage.getItem('timecol')  || '0'),
+    datecol:  +(localStorage.getItem('datecol')  || '0')
   };
 }
 function saveCfg(c) {
-  localStorage.setItem('theme', c.theme);
-  localStorage.setItem('scene', c.scene);
+  localStorage.setItem('theme',   c.theme);
+  localStorage.setItem('scene',   c.scene);
+  localStorage.setItem('timecol', c.timecol);
+  localStorage.setItem('datecol', c.datecol);
 }
 function sendMsg(c) {
   Pebble.sendAppMessage(
-    { 0: c.theme, 1: c.scene },
+    { 0: c.theme, 1: c.scene, 2: c.timecol, 3: c.datecol },
     function() { console.log('ok'); },
     function(e) { console.log('fail', e); }
   );
@@ -52,12 +58,24 @@ function buildConfig(c) {
         'ePaper \u2014 Dithered greyscale',
         'Monochrome \u2014 Black & white'
       ], c.theme)
+    + '<h3>Time Colour</h3>'
+    + radio('timecol', [
+        'Yellow \u2014 Classic GTA2',
+        'White \u2014 Clean',
+        'Light Grey \u2014 Subtle'
+      ], c.timecol)
+    + '<h3>Date Colour</h3>'
+    + radio('datecol', [
+        'White \u2014 Clean',
+        'Yellow \u2014 Matches time',
+        'Light Grey \u2014 Subtle'
+      ], c.datecol)
     + '<button id="s">Save</button>'
     + '<script>'
     + 'document.getElementById("s").onclick=function(){'
     + 'function g(n){var e=document.querySelector("input[name="+n+"]:checked");return e?+e.value:0;}'
     + 'location.href="pebblejs://close#"+encodeURIComponent(JSON.stringify({'
-    + 'theme:g("theme"),scene:g("scene")}));'
+    + 'theme:g("theme"),scene:g("scene"),timecol:g("timecol"),datecol:g("datecol")}));'
     + '};<\/script></body></html>';
   return 'data:text/html,' + encodeURIComponent(h);
 }
