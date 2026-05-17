@@ -5,118 +5,31 @@
   "companyName": "manaksu",
   "versionLabel": "1.0",
   "sdkVersion": "3",
-  "targetPlatforms": [
-    "basalt"
-  ],
-  "watchapp": {
-    "watchface": true
-  },
+  "targetPlatforms": ["basalt"],
+  "watchapp": { "watchface": true },
   "appKeys": {
     "KEY_THEME": 0
   },
   "resources": {
     "media": [
-      {
-        "type": "font",
-        "name": "FONT_COURIER_18",
-        "file": "fonts/CourierPrime-Regular.ttf"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_GTA2MAP",
-        "file": "images/gta2map.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_GTA2MAP_EPAPER",
-        "file": "images/gta2map_epaper.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_GTA2MAP_MONO",
-        "file": "images/gta2map_mono.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_ICON_STEPS",
-        "file": "images/hud_icon_steps.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_ICON_HEART",
-        "file": "images/hud_icon_heart.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_ICON_BATT",
-        "file": "images/hud_icon_batt.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_BAR_STEPS",
-        "file": "images/hud_bar_steps.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_BAR_HEART",
-        "file": "images/hud_bar_heart.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_BAR_BATT",
-        "file": "images/hud_bar_batt.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_ICON_STEPS_MONO",
-        "file": "images/hud_icon_steps_mono.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_ICON_HEART_MONO",
-        "file": "images/hud_icon_heart_mono.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_ICON_BATT_MONO",
-        "file": "images/hud_icon_batt_mono.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_BAR_STEPS_MONO",
-        "file": "images/hud_bar_steps_mono.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_BAR_HEART_MONO",
-        "file": "images/hud_bar_heart_mono.png",
-        "storageFormat": "pbi"
-      },
-      {
-        "type": "bitmap",
-        "name": "IMAGE_HUD_BAR_BATT_MONO",
-        "file": "images/hud_bar_batt_mono.png",
-        "storageFormat": "pbi"
-      }
+      { "type": "bitmap", "name": "IMAGE_GTA2MAP",              "file": "images/gta2map.png",              "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_GTA2MAP_EPAPER",       "file": "images/gta2map_epaper.png",       "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_GTA2MAP_MONO",         "file": "images/gta2map_mono.png",         "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_STEPS",       "file": "images/hud_icon_steps.png",       "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_HEART",       "file": "images/hud_icon_heart.png",       "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_BATT",        "file": "images/hud_icon_batt.png",        "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_STEPS",        "file": "images/hud_bar_steps.png",        "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_HEART",        "file": "images/hud_bar_heart.png",        "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_BATT",         "file": "images/hud_bar_batt.png",         "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_STEPS_MONO",  "file": "images/hud_icon_steps_mono.png",  "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_HEART_MONO",  "file": "images/hud_icon_heart_mono.png",  "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_ICON_BATT_MONO",   "file": "images/hud_icon_batt_mono.png",   "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_STEPS_MONO",   "file": "images/hud_bar_steps_mono.png",   "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_HEART_MONO",   "file": "images/hud_bar_heart_mono.png",   "storageFormat": "pbi" },
+      { "type": "bitmap", "name": "IMAGE_HUD_BAR_BATT_MONO",    "file": "images/hud_bar_batt_mono.png",    "storageFormat": "pbi" }
     ]
   },
-  "capabilities": [
-    "health",
-    "configurable"
-  ],
+  "capabilities": ["health", "configurable"],
   "projectType": "native",
   "messageKeys": {}
 }
