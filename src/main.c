@@ -27,7 +27,7 @@
 
 /* ── HUD layout ── */
 #define ICON_W    7
-#define BAR_W    22
+#define BAR_W   22
 #define ROW_H     8
 #define ROW_GAP   2
 #define LEFT      5
@@ -64,7 +64,6 @@ static GBitmap     *s_bar_steps_bmp,    *s_bar_heart_bmp,    *s_bar_batt_bmp;
 
 static TextLayer   *s_steps_label, *s_heart_label, *s_batt_label;
 static TextLayer   *s_time_layer, *s_date_layer;
-static Layer       *s_bg_date_layer, *s_bg_time_layer;
 
 static char s_time_buf[6], s_date_buf[10];
 static char s_steps_buf[8], s_heart_buf[6], s_batt_buf[6];
@@ -75,17 +74,6 @@ static GColor resolve_col(int col_setting) {
     case COL_WHITE:     return GColorWhite;
     case COL_LIGHTGREY: return GColorLightGray;
     default:            return GColorYellow;
-  }
-}
-
-/* ── stipple semi-transparent background ── */
-static void draw_stipple(Layer *layer, GContext *ctx) {
-  GRect b = layer_get_bounds(layer);
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  for (int y = 0; y < b.size.h; y++) {
-    for (int x = (y % 2); x < b.size.w; x += 2) {
-      graphics_draw_pixel(ctx, GPoint(x, y));
-    }
   }
 }
 
@@ -256,18 +244,9 @@ static void window_load(Window *window) {
   make_bmp(&s_bar_batt_layer,   &s_bar_batt_bmp,   bar_b,  GRect(BAR_X, ROW3_Y, BAR_W,  ROW_H), root);
   s_batt_label = make_stat(GRect(STAT_X, ROW3_Y-1, STAT_W, ROW_H+2), root);
 
-  /* stipple bg layers */
-  s_bg_date_layer = layer_create(GRect(DATE_X, DATE_Y, DATE_W, DATE_H));
-  layer_set_update_proc(s_bg_date_layer, draw_stipple);
-  layer_add_child(root, s_bg_date_layer);
-
-  s_bg_time_layer = layer_create(GRect(TIME_X, TIME_Y, TIME_W, TIME_H));
-  layer_set_update_proc(s_bg_time_layer, draw_stipple);
-  layer_add_child(root, s_bg_time_layer);
-
   /* date */
   s_date_layer = text_layer_create(GRect(DATE_X, DATE_Y, DATE_W, DATE_H));
-  text_layer_set_background_color(s_date_layer, GColorClear);
+  text_layer_set_background_color(s_date_layer, GColorBlack);
   text_layer_set_text_color(s_date_layer, resolve_col(s_date_col));
   text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
@@ -275,7 +254,7 @@ static void window_load(Window *window) {
 
   /* time */
   s_time_layer = text_layer_create(GRect(TIME_X, TIME_Y, TIME_W, TIME_H));
-  text_layer_set_background_color(s_time_layer, GColorClear);
+  text_layer_set_background_color(s_time_layer, GColorBlack);
   text_layer_set_text_color(s_time_layer, resolve_col(s_time_col));
   text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_LECO_20_BOLD_NUMBERS));
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
@@ -292,8 +271,6 @@ static void window_unload(Window *window) {
   text_layer_destroy(s_batt_label);
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_date_layer);
-  layer_destroy(s_bg_date_layer);
-  layer_destroy(s_bg_time_layer);
   bitmap_layer_destroy(s_bg_layer);
   bitmap_layer_destroy(s_icon_steps_layer);
   bitmap_layer_destroy(s_bar_steps_layer);
