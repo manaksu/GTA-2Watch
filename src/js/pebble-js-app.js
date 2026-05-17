@@ -1,18 +1,21 @@
 /*
  * GTA2 HUD Watchface -- PebbleKit JS
  *   Key 0: KEY_THEME  0=Normal  1=ePaper  2=Monochrome
+ *   Key 1: KEY_SCENE  0=Industrial  1=Downtown  2=Residential
  */
 function loadCfg() {
   return {
-    theme: +(localStorage.getItem('theme') || '0')
+    theme: +(localStorage.getItem('theme') || '0'),
+    scene: +(localStorage.getItem('scene') || '0')
   };
 }
 function saveCfg(c) {
   localStorage.setItem('theme', c.theme);
+  localStorage.setItem('scene', c.scene);
 }
 function sendMsg(c) {
   Pebble.sendAppMessage(
-    { 0: c.theme },
+    { 0: c.theme, 1: c.scene },
     function() { console.log('ok'); },
     function(e) { console.log('fail', e); }
   );
@@ -37,18 +40,24 @@ function buildConfig(c) {
     + '.opt span{font-size:14px}'
     + '#s{display:block;width:100%;padding:14px;background:#222;color:#fff;border:1px solid #3a3a3a;border-radius:8px;font-size:15px;margin-top:24px;cursor:pointer;box-sizing:border-box}'
     + '</style></head><body>'
+    + '<h3>Scene</h3>'
+    + radio('scene', [
+        'Industrial Sector \u2014 Map 03',
+        'Downtown Sector \u2014 Map 01',
+        'Residential Sector \u2014 Map 02'
+      ], c.scene)
     + '<h3>Display Mode</h3>'
     + radio('theme', [
-        'Normal \u2014 Full colour map',
+        'Normal \u2014 Full colour',
         'ePaper \u2014 Dithered greyscale',
-        'Monochrome \u2014 Inverted black & white'
+        'Monochrome \u2014 Black & white'
       ], c.theme)
     + '<button id="s">Save</button>'
     + '<script>'
     + 'document.getElementById("s").onclick=function(){'
     + 'function g(n){var e=document.querySelector("input[name="+n+"]:checked");return e?+e.value:0;}'
     + 'location.href="pebblejs://close#"+encodeURIComponent(JSON.stringify({'
-    + 'theme:g("theme")}));'
+    + 'theme:g("theme"),scene:g("scene")}));'
     + '};<\/script></body></html>';
   return 'data:text/html,' + encodeURIComponent(h);
 }
